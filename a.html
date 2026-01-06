@@ -2,53 +2,76 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistema de Almoxarifado</title>
-
-<!-- BIBLIOTECA DE ASSINATURA PROFISSIONAL -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
-
 <style>
-    body { font-family: Arial; background:#111; color:#fff; margin:0; }
-    header { background:#ff6600; padding:15px; text-align:center; font-size:24px; font-weight:bold; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background:#111; color:#fff; margin:0; padding:0; }
+    header { background:#ff6600; padding:20px; text-align:center; font-size:28px; font-weight:bold; }
     nav { display:flex; background:#222; }
     nav button {
-        flex:1; padding:12px; background:#222; color:#fff;
-        border:1px solid #333; cursor:pointer; font-size:16px;
+        flex:1; padding:15px; background:#222; color:#fff;
+        border:1px solid #333; cursor:pointer; font-size:16px; transition:0.3s;
     }
-    nav button:hover { background:#ff6600; }
-    .page { display:none; padding:20px; }
-    input, select {
-        padding:10px; width:100%; margin:8px 0;
-        background:#222; color:#fff; border:1px solid #555;
+    nav button:hover, nav button.active { background:#ff6600; }
+    .page { display:none; padding:20px; max-width:1200px; margin:0 auto; }
+    .page.active { display:block; }
+    
+    input, select, textarea {
+        padding:12px; width:100%; margin:8px 0;
+        background:#222; color:#fff; border:1px solid #555; border-radius:5px;
+        font-size:14px;
     }
+    
     button.action {
-        padding:10px; background:#ff6600; color:#000;
+        padding:12px 20px; background:#ff6600; color:#000;
         border:none; font-size:16px; cursor:pointer; width:100%;
-        margin-top:10px;
+        margin-top:10px; border-radius:5px; font-weight:bold; transition:0.3s;
     }
-    table { width:100%; margin-top:20px; border-collapse:collapse; }
-    th, td {
-        padding:10px; border:1px solid #444; text-align:center;
+    button.action:hover { background:#ff8833; }
+    
+    table { 
+        width:100%; margin-top:20px; border-collapse:collapse; 
+        background:#222; border-radius:8px; overflow:hidden;
     }
-
-    /* POP-UP */
+    th { background:#ff6600; color:#000; padding:12px; border:1px solid #444; font-weight:bold; }
+    td { padding:10px; border:1px solid #444; text-align:center; }
+    
+    .btn-small {
+        padding:8px 12px; background:#ff6600; color:#000;
+        border:none; cursor:pointer; border-radius:4px; font-weight:bold; margin:2px;
+    }
+    .btn-small:hover { background:#ff8833; }
+    
     #popupFundo {
         display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-        background:rgba(0,0,0,0.8); justify-content:center; align-items:center;
-        z-index:9999;
+        background:rgba(0,0,0,0.9); justify-content:center; align-items:center; z-index:9999;
     }
+    #popupFundo.active { display:flex; }
+    
     #popup {
-        background:#fff; padding:20px; width:90%; max-width:500px;
-        border-radius:10px; color:#000;
-        text-align:center;
+        background:#fff; padding:30px; width:90%; max-width:500px;
+        border-radius:10px; color:#000; text-align:center;
     }
+    
     #signaturePad {
-        border:2px solid #ff6600;
-        border-radius:10px;
-        background:white;
-        width:100%;
-        height:260px;
+        border:2px solid #ff6600; border-radius:10px;
+        background:white; width:100%; height:260px; display:block; margin:15px 0;
     }
+    
+    .form-group { margin-bottom:15px; text-align:left; }
+    .form-group label { display:block; margin-bottom:5px; font-weight:bold; }
+    
+    .stats {
+        display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+        gap:15px; margin-bottom:20px;
+    }
+    .stat-card {
+        background:#222; padding:20px; border-radius:8px; border:2px solid #ff6600; text-align:center;
+    }
+    .stat-number { font-size:32px; font-weight:bold; color:#ff6600; }
+    .stat-label { font-size:14px; color:#ccc; margin-top:5px; }
 </style>
 </head>
 <body>
@@ -56,234 +79,433 @@
 <header>Sistema de Almoxarifado</header>
 
 <nav>
+    <button onclick="showPage('estoque')" class="active">Estoque</button>
     <button onclick="showPage('emprestimo')">Empréstimo</button>
     <button onclick="showPage('devolucao')">Devolução</button>
-    <button onclick="showPage('almox')">Almoxarifado</button>
-    <button onclick="showPage('registros')">Registros</button>
+    <button onclick="showPage('historico')">Histórico</button>
 </nav>
 
-<!-- -------------------- EMPRÉSTIMO -------------------- -->
-<div id="emprestimo" class="page" style="display:block;">
-    <h2>Empréstimo de Ferramenta</h2>
-
-    <label>Nome da Pessoa</label>
-    <input id="nomePessoa">
-
-    <label>Nome da Ferramenta</label>
-    <input id="nomeFerramenta">
-
-    <label>Data</label>
-    <input id="dataEmp" type="date">
-
-    <button class="action" onclick="abrirPopup()">Assinar Digitalmente</button>
-
-    <button class="action" onclick="salvarEmprestimo()">Salvar Empréstimo</button>
+<div id="estoque" class="page active">
+    <h2>Gestão de Estoque</h2>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number" id="totalFerramentas">0</div>
+            <div class="stat-label">Total de Ferramentas</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="totalEmprestadas">0</div>
+            <div class="stat-label">Emprestadas</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="totalDisponiveis">0</div>
+            <div class="stat-label">Disponíveis</div>
+        </div>
+    </div>
+    
+    <h3>Adicionar Nova Ferramenta</h3>
+    <div class="form-group">
+        <label>Nome da Ferramenta</label>
+        <input type="text" id="nomeFerramenta" placeholder="Ex: Martelo, Chave de Fenda...">
+    </div>
+    <div class="form-group">
+        <label>Quantidade</label>
+        <input type="number" id="quantidadeFerramenta" min="1" value="1">
+    </div>
+    <button class="action" onclick="adicionarFerramenta()">Adicionar ao Estoque</button>
+    
+    <h3>Ferramentas Disponíveis</h3>
+    <table id="tabelaEstoque">
+        <thead>
+            <tr>
+                <th>Ferramenta</th>
+                <th>Quantidade Total</th>
+                <th>Disponível</th>
+                <th>Emprestadas</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 </div>
 
-<!-- POP-UP DE ASSINATURA DIGITAL -->
+<div id="emprestimo" class="page">
+    <h2>Registrar Empréstimo</h2>
+    
+    <div class="form-group">
+        <label>Nome da Pessoa</label>
+        <input type="text" id="nomeEmprestimo" placeholder="Nome completo">
+    </div>
+    
+    <div class="form-group">
+        <label>Ferramenta</label>
+        <select id="ferramentaEmprestimo">
+            <option value="">Selecione uma ferramenta</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Quantidade</label>
+        <input type="number" id="quantidadeEmprestimo" min="1" value="1">
+    </div>
+    
+    <button class="action" onclick="abrirPopupAssinatura('emprestimo')">Registrar Empréstimo</button>
+</div>
+
+<div id="devolucao" class="page">
+    <h2>Registrar Devolução</h2>
+    
+    <div class="form-group">
+        <label>Empréstimo</label>
+        <select id="emprestimoSelect" onchange="preencherDadosDevolucao()">
+            <option value="">Selecione o empréstimo</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Nome da Pessoa</label>
+        <input type="text" id="nomeDevolucao" disabled>
+    </div>
+    
+    <div class="form-group">
+        <label>Ferramenta</label>
+        <input type="text" id="ferramentaDevolucao" disabled>
+    </div>
+    
+    <div class="form-group">
+        <label>Quantidade</label>
+        <input type="number" id="quantidadeDevolucao" disabled>
+    </div>
+    
+    <button class="action" onclick="abrirPopupAssinatura('devolucao')">Registrar Devolução</button>
+</div>
+
+<div id="historico" class="page">
+    <h2>Histórico de Movimentações</h2>
+    
+    <table id="tabelaHistorico">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Pessoa</th>
+                <th>Ferramenta</th>
+                <th>Qtd</th>
+                <th>Data/Hora Empréstimo</th>
+                <th>Data/Hora Devolução</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
 <div id="popupFundo">
     <div id="popup">
-        <h3>Assinatura Digital</h3>
-
+        <h3>Assinatura</h3>
+        <p>Por favor, assine no campo abaixo:</p>
         <canvas id="signaturePad"></canvas>
-
         <button class="action" onclick="limparAssinatura()">Limpar</button>
-        <button class="action" onclick="confirmarAssinatura()">Confirmar Assinatura</button>
+        <button class="action" onclick="confirmarAssinatura()">Confirmar</button>
+        <button class="action" onclick="fecharPopup()" style="background:#666;">Cancelar</button>
     </div>
 </div>
 
-<!-- -------------------- DEVOLUÇÃO -------------------- -->
-<div id="devolucao" class="page">
-    <h2>Devolução</h2>
-
-    <label>Nome da Pessoa</label>
-    <input id="devolucaoPessoa">
-
-    <label>Nome da Ferramenta</label>
-    <input id="devolucaoFerramenta">
-
-    <button class="action" onclick="registrarDevolucao()">Registrar Devolução</button>
-</div>
-
-<!-- -------------------- ALMOXARIFADO -------------------- -->
-<div id="almox" class="page">
-    <h2>Almoxarifado</h2>
-
-    <label>Nome da ferramenta</label>
-    <input id="almoxNome">
-
-    <label>Quantidade</label>
-    <input id="almoxQtd" type="number">
-
-    <label>Categoria</label>
-    <select id="almoxCat">
-        <option value="manual">Manual</option>
-        <option value="eletrica">Elétrica</option>
-        <option value="hidraulica">Hidráulica</option>
-    </select>
-
-    <button class="action" onclick="adicionarFerramenta()">Adicionar</button>
-
-    <h3>Filtros</h3>
-
-    <label>Quantidade mínima</label>
-    <input type="number" id="filtroQtd">
-
-    <label>Categoria</label>
-    <select id="filtroCat">
-        <option value="todas">Todas</option>
-        <option value="manual">Manual</option>
-        <option value="eletrica">Elétrica</option>
-        <option value="hidraulica">Hidráulica</option>
-    </select>
-
-    <button class="action" onclick="ordenarAZ()">Ordenar A–Z</button>
-    <button class="action" onclick="filtrar()">Aplicar Filtro</button>
-    <button class="action" onclick="mostrarTudo()">Mostrar Tudo</button>
-    <button class="action" onclick="filtrarBaixa()">Baixa Quantidade</button>
-
-    <table>
-        <thead>
-            <tr><th>Ferramenta</th><th>Qtd</th><th>Categoria</th></tr>
-        </thead>
-        <tbody id="tabelaAlmox"></tbody>
-    </table>
-</div>
-
-<!-- -------------------- REGISTROS -------------------- -->
-<div id="registros" class="page">
-    <h2>Registros</h2>
-    <table>
-        <thead>
-            <tr><th>Pessoa</th><th>Ferramenta</th><th>Data</th><th>Assinatura</th></tr>
-        </thead>
-        <tbody id="tabelaRegistros"></tbody>
-    </table>
-</div>
-
 <script>
-let ferramentas = [];
-let registros = [];
-let assinaturaOK = false;
-let assinaturaImg = "";
+let estoque = JSON.parse(localStorage.getItem('estoque')) || [];
+let emprestimos = JSON.parse(localStorage.getItem('emprestimos')) || [];
+let historico = JSON.parse(localStorage.getItem('historico')) || [];
+let signaturePad;
+let tipoAssinatura = '';
 
-/* PÁGINAS */
-function showPage(id) {
-    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-    document.getElementById(id).style.display = 'block';
+function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    event.target.classList.add('active');
+    
+    if(pageId === 'estoque') atualizarTabelaEstoque();
+    if(pageId === 'emprestimo') atualizarSelectFerramentas();
+    if(pageId === 'devolucao') atualizarSelectEmprestimos();
+    if(pageId === 'historico') atualizarTabelaHistorico();
 }
 
-/* POP-UP */
-function abrirPopup() { document.getElementById("popupFundo").style.display = "flex"; }
-function fecharPopup() { document.getElementById("popupFundo").style.display = "none"; }
+function adicionarFerramenta() {
+    const nome = document.getElementById('nomeFerramenta').value.trim();
+    const quantidade = parseInt(document.getElementById('quantidadeFerramenta').value);
+    
+    if(!nome || quantidade < 1) {
+        alert('Preencha todos os campos corretamente!');
+        return;
+    }
+    
+    const ferramentaExistente = estoque.find(f => f.nome.toLowerCase() === nome.toLowerCase());
+    
+    if(ferramentaExistente) {
+        ferramentaExistente.quantidade += quantidade;
+    } else {
+        estoque.push({
+            id: Date.now(),
+            nome: nome,
+            quantidade: quantidade,
+            emprestadas: 0
+        });
+    }
+    
+    salvarDados();
+    document.getElementById('nomeFerramenta').value = '';
+    document.getElementById('quantidadeFerramenta').value = '1';
+    atualizarTabelaEstoque();
+    alert('Ferramenta adicionada com sucesso!');
+}
 
-/* ASSINATURA DIGITAL PROFISSIONAL */
-let canvas = document.getElementById("signaturePad");
-let signaturePad = new SignaturePad(canvas, {
-    backgroundColor: "white",
-    penColor: "black"
-});
+function atualizarTabelaEstoque() {
+    const tbody = document.querySelector('#tabelaEstoque tbody');
+    tbody.innerHTML = '';
+    
+    let totalFerr = 0;
+    let totalEmp = 0;
+    let totalDisp = 0;
+    
+    estoque.forEach(ferramenta => {
+        const disponiveis = ferramenta.quantidade - ferramenta.emprestadas;
+        totalFerr += ferramenta.quantidade;
+        totalEmp += ferramenta.emprestadas;
+        totalDisp += disponiveis;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${ferramenta.nome}</td>
+            <td>${ferramenta.quantidade}</td>
+            <td>${disponiveis}</td>
+            <td>${ferramenta.emprestadas}</td>
+            <td>
+                <button class="btn-small" onclick="removerFerramenta(${ferramenta.id})">Remover</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    document.getElementById('totalFerramentas').textContent = totalFerr;
+    document.getElementById('totalEmprestadas').textContent = totalEmp;
+    document.getElementById('totalDisponiveis').textContent = totalDisp;
+}
+
+function removerFerramenta(id) {
+    const ferramenta = estoque.find(f => f.id === id);
+    if(ferramenta && ferramenta.emprestadas > 0) {
+        alert('Não é possível remover. Existem unidades emprestadas!');
+        return;
+    }
+    
+    if(confirm('Deseja realmente remover esta ferramenta?')) {
+        estoque = estoque.filter(f => f.id !== id);
+        salvarDados();
+        atualizarTabelaEstoque();
+    }
+}
+
+function atualizarSelectFerramentas() {
+    const select = document.getElementById('ferramentaEmprestimo');
+    select.innerHTML = '<option value="">Selecione uma ferramenta</option>';
+    
+    estoque.forEach(ferramenta => {
+        const disponiveis = ferramenta.quantidade - ferramenta.emprestadas;
+        if(disponiveis > 0) {
+            const option = document.createElement('option');
+            option.value = ferramenta.id;
+            option.textContent = `${ferramenta.nome} (${disponiveis} disponíveis)`;
+            select.appendChild(option);
+        }
+    });
+}
+
+function abrirPopupAssinatura(tipo) {
+    tipoAssinatura = tipo;
+    
+    if(tipo === 'emprestimo') {
+        const nome = document.getElementById('nomeEmprestimo').value.trim();
+        const ferramentaId = document.getElementById('ferramentaEmprestimo').value;
+        const quantidade = parseInt(document.getElementById('quantidadeEmprestimo').value);
+        
+        if(!nome || !ferramentaId || quantidade < 1) {
+            alert('Preencha todos os campos!');
+            return;
+        }
+        
+        const ferramenta = estoque.find(f => f.id == ferramentaId);
+        const disponiveis = ferramenta.quantidade - ferramenta.emprestadas;
+        
+        if(quantidade > disponiveis) {
+            alert('Quantidade solicitada não disponível!');
+            return;
+        }
+    } else if(tipo === 'devolucao') {
+        const emprestimoId = document.getElementById('emprestimoSelect').value;
+        if(!emprestimoId) {
+            alert('Selecione um empréstimo!');
+            return;
+        }
+    }
+    
+    document.getElementById('popupFundo').classList.add('active');
+    
+    setTimeout(() => {
+        const canvas = document.getElementById('signaturePad');
+        signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(0, 0, 0)'
+        });
+        resizeCanvas();
+    }, 100);
+}
+
+function resizeCanvas() {
+    const canvas = document.getElementById('signaturePad');
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    canvas.getContext("2d").scale(ratio, ratio);
+    signaturePad.clear();
+}
 
 function limparAssinatura() {
     signaturePad.clear();
 }
 
 function confirmarAssinatura() {
-    if (signaturePad.isEmpty()) {
-        alert("Faça a assinatura primeiro!");
+    if(signaturePad.isEmpty()) {
+        alert('Por favor, forneça uma assinatura!');
         return;
     }
-
-    assinaturaImg = signaturePad.toDataURL();
-    assinaturaOK = true;
+    
+    const assinaturaData = signaturePad.toDataURL();
+    
+    if(tipoAssinatura === 'emprestimo') {
+        registrarEmprestimo(assinaturaData);
+    } else if(tipoAssinatura === 'devolucao') {
+        registrarDevolucao(assinaturaData);
+    }
+    
     fecharPopup();
-    alert("Assinatura salva!");
 }
 
-/* SALVAR EMPRÉSTIMO */
-function salvarEmprestimo() {
-    let pessoa = document.getElementById("nomePessoa").value;
-    let ferramenta = document.getElementById("nomeFerramenta").value;
-    let data = document.getElementById("dataEmp").value;
-
-    if (!pessoa || !ferramenta || !data) {
-        alert("Preencha nome, ferramenta e data!");
-        return;
-    }
-
-    if (!assinaturaOK) {
-        alert("Você precisa assinar antes!");
-        return;
-    }
-
-    registros.push({ pessoa, ferramenta, data, assinatura: assinaturaImg });
-    atualizarRegistros();
-
-    assinaturaOK = false;
-    signaturePad.clear();
-
-    alert("Empréstimo salvo!");
+function registrarEmprestimo(assinatura) {
+    const nome = document.getElementById('nomeEmprestimo').value.trim();
+    const ferramentaId = parseInt(document.getElementById('ferramentaEmprestimo').value);
+    const quantidade = parseInt(document.getElementById('quantidadeEmprestimo').value);
+    
+    const ferramenta = estoque.find(f => f.id === ferramentaId);
+    ferramenta.emprestadas += quantidade;
+    
+    const emprestimo = {
+        id: Date.now(),
+        nome: nome,
+        ferramentaId: ferramentaId,
+        ferramentaNome: ferramenta.nome,
+        quantidade: quantidade,
+        dataEmprestimo: new Date().toLocaleString('pt-BR'),
+        assinaturaEmprestimo: assinatura,
+        devolvido: false
+    };
+    
+    emprestimos.push(emprestimo);
+    historico.push({...emprestimo, tipo: 'Empréstimo'});
+    
+    salvarDados();
+    
+    document.getElementById('nomeEmprestimo').value = '';
+    document.getElementById('quantidadeEmprestimo').value = '1';
+    
+    alert('Empréstimo registrado com sucesso!');
 }
 
-/* DEVOLUÇÃO */
-function registrarDevolucao() {
-    let nome = document.getElementById("devolucaoFerramenta").value;
-    alert("Ferramenta devolvida: " + nome);
-}
-
-/* ALMOXARIFADO */
-function adicionarFerramenta() {
-    let nome = document.getElementById("almoxNome").value;
-    let qtd = parseInt(document.getElementById("almoxQtd").value);
-    let cat = document.getElementById("almoxCat").value;
-
-    ferramentas.push({ nome, qtd, cat });
-    mostrarTudo();
-}
-
-function mostrarTudo() { atualizarTabela(ferramentas); }
-
-function filtrar() {
-    let qtd = parseInt(document.getElementById("filtroQtd").value);
-    let cat = document.getElementById("filtroCat").value;
-
-    atualizarTabela(
-        ferramentas.filter(f =>
-            (isNaN(qtd) || f.qtd >= qtd) &&
-            (cat === "todas" || f.cat === cat)
-        )
-    );
-}
-
-function ordenarAZ() {
-    ferramentas.sort((a,b)=>a.nome.localeCompare(b.nome));
-    mostrarTudo();
-}
-
-function filtrarBaixa() {
-    atualizarTabela(ferramentas.filter(f => f.qtd <= 2));
-}
-
-/* TABELAS */
-function atualizarTabela(lista) {
-    let tabela = document.getElementById("tabelaAlmox");
-    tabela.innerHTML = "";
-    lista.forEach(f => tabela.innerHTML += `<tr><td>${f.nome}</td><td>${f.qtd}</td><td>${f.cat}</td></tr>`);
-}
-
-function atualizarRegistros() {
-    let tabela = document.getElementById("tabelaRegistros");
-    tabela.innerHTML = "";
-    registros.forEach(r => {
-        tabela.innerHTML += `
-        <tr>
-            <td>${r.pessoa}</td>
-            <td>${r.ferramenta}</td>
-            <td>${r.data}</td>
-            <td><img src="${r.assinatura}" width="100"></td>
-        </tr>`;
+function atualizarSelectEmprestimos() {
+    const select = document.getElementById('emprestimoSelect');
+    select.innerHTML = '<option value="">Selecione o empréstimo</option>';
+    
+    emprestimos.filter(e => !e.devolvido).forEach(emprestimo => {
+        const option = document.createElement('option');
+        option.value = emprestimo.id;
+        option.textContent = `${emprestimo.nome} - ${emprestimo.ferramentaNome} (${emprestimo.quantidade}) - ${emprestimo.dataEmprestimo}`;
+        select.appendChild(option);
     });
 }
+
+function preencherDadosDevolucao() {
+    const emprestimoId = parseInt(document.getElementById('emprestimoSelect').value);
+    if(!emprestimoId) {
+        document.getElementById('nomeDevolucao').value = '';
+        document.getElementById('ferramentaDevolucao').value = '';
+        document.getElementById('quantidadeDevolucao').value = '';
+        return;
+    }
+    
+    const emprestimo = emprestimos.find(e => e.id === emprestimoId);
+    document.getElementById('nomeDevolucao').value = emprestimo.nome;
+    document.getElementById('ferramentaDevolucao').value = emprestimo.ferramentaNome;
+    document.getElementById('quantidadeDevolucao').value = emprestimo.quantidade;
+}
+
+function registrarDevolucao(assinatura) {
+    const emprestimoId = parseInt(document.getElementById('emprestimoSelect').value);
+    const emprestimo = emprestimos.find(e => e.id === emprestimoId);
+    
+    const ferramenta = estoque.find(f => f.id === emprestimo.ferramentaId);
+    ferramenta.emprestadas -= emprestimo.quantidade;
+    
+    emprestimo.devolvido = true;
+    emprestimo.dataDevolucao = new Date().toLocaleString('pt-BR');
+    emprestimo.assinaturaDevolucao = assinatura;
+    
+    historico.push({
+        ...emprestimo,
+        tipo: 'Devolução'
+    });
+    
+    salvarDados();
+    
+    document.getElementById('emprestimoSelect').value = '';
+    document.getElementById('nomeDevolucao').value = '';
+    document.getElementById('ferramentaDevolucao').value = '';
+    document.getElementById('quantidadeDevolucao').value = '';
+    
+    alert('Devolução registrada com sucesso!');
+    atualizarSelectEmprestimos();
+}
+
+function atualizarTabelaHistorico() {
+    const tbody = document.querySelector('#tabelaHistorico tbody');
+    tbody.innerHTML = '';
+    
+    const historicoOrdenado = [...historico].reverse();
+    
+    historicoOrdenado.forEach(registro => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${registro.tipo}</td>
+            <td>${registro.nome}</td>
+            <td>${registro.ferramentaNome}</td>
+            <td>${registro.quantidade}</td>
+            <td>${registro.dataEmprestimo || '-'}</td>
+            <td>${registro.dataDevolucao || '-'}</td>
+            <td>${registro.devolvido ? 'Devolvido' : 'Pendente'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function fecharPopup() {
+    document.getElementById('popupFundo').classList.remove('active');
+    signaturePad = null;
+}
+
+function salvarDados() {
+    localStorage.setItem('estoque', JSON.stringify(estoque));
+    localStorage.setItem('emprestimos', JSON.stringify(emprestimos));
+    localStorage.setItem('historico', JSON.stringify(historico));
+}
+
+atualizarTabelaEstoque();
 </script>
 
 </body>
